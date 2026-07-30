@@ -26,11 +26,12 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 def send_emailjs_lead(lead_data):
     url = "https://api.emailjs.com/api/v1.0/email/send"
     
-    # Payload exact match with EmailJS Template variables & Web Form
+    # Payload matching exact EmailJS Template variables & Web Form
     payload = {
         "service_id": "service_5wnjb08",
         "template_id": "template_qrc9e94",
         "user_id": "LYQZmBd9qgVMA3_-Q",
+        "accessToken": "1bGtrMYI-v83nRbHKlAQO",  # EmailJS Private Key
         "template_params": {
             "title": "AI Chatbot",
             "firstName": lead_data.get("firstName", "Client"),

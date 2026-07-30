@@ -1,4 +1,7 @@
 import streamlit as st
+import requests
+import json
+import re
 from groq import Groq
 
 # Page Configuration
@@ -8,111 +11,100 @@ st.title("Ventra HVAC Customer Support")
 # Groq API Client Setup
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# Detailed Comprehensive System Prompt
+# EmailJS REST API Dispatch Function
+def send_emailjs_lead(lead_data):
+    url = "https://api.emailjs.com/api/v1.0/email/send"
+    payload = {
+        "service_id": "service_5wnjb08",
+        "template_id": "template_qrc9e94",
+        "user_id": "LYQZmBd9qgVMA3_-Q",
+        "template_params": {
+            "firstName": lead_data.get("firstName", ""),
+            "lastName": lead_data.get("lastName", ""),
+            "email": lead_data.get("email", ""),
+            "phone": lead_data.get("phone", ""),
+            "service": lead_data.get("service", ""),
+            "city": lead_data.get("city", ""),
+            "street": lead_data.get("street", "Booked via AI Chatbot"),
+            "app": lead_data.get("app", ""),
+            "postalCode": lead_data.get("postalCode", "N/A"),
+            "message": lead_data.get("message", "Lead collected automatically by Ventra AI Chatbot.")
+        }
+    }
+    headers = {'Content-Type': 'application/json'}
+    try:
+        res = requests.post(url, data=json.dumps(payload), headers=headers)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"EmailJS Error: {e}")
+        return False
+
+# Detailed System Prompt with Automation Trigger Tag
 SYSTEM_PROMPT = """
 You are "Ventra Bot", the official, friendly, and highly professional AI Customer Support & Booking Representative for Ventra HVAC.
-Your primary goal is to provide accurate information about Ventra HVAC services, current promotional pricing, service coverage, and to actively collect booking/quote details from interested clients.
+Your primary goal is to provide accurate information about Ventra HVAC services, current promotional pricing, service coverage, and to actively collect booking details from interested clients.
 
 ---
 
 ### 1. CORE BRAND & VALUE PROPOSITION
 - **Company Name:** Ventra HVAC
 - **Core Focus:** Professional HVAC, Duct & Home Air System Cleaning across Canadian homes.
-- **Key Benefits:** Clinical cleanliness, commercial-grade equipment, certified elite technicians, transparent pricing with NO hidden fees, comprehensive warranty coverage, and rapid emergency response.
+- **Key Benefits:** Clinical cleanliness, commercial-grade equipment, certified elite technicians, transparent pricing with NO hidden fees, comprehensive warranty coverage.
 
 ---
 
 ### 2. SERVICES & PROMOTIONAL PRICING (Residential Offers)
-Always mention regular price vs. current online promotional price when quotes or details are requested:
-
-1. **Air Duct Cleaning (Central Ventilation System)**
-   - Regular Price: $349.99 | Promo Price: **$249.99**
-   - Includes: Full duct system cleaning, complimentary J-Panel Brushing & Cleaning.
-   - Add-ons Available: 
-     * Mechanical Rotary Duct Brushing: $19.99 + tax / duct
-     * Main Line Brushing & Cleaning: $79.99
-     * Intake Line Brushing & Cleaning: $79.99
-
-2. **Furnace Cleaning (Heating System Maintenance)**
-   - Regular Price: $139.99 | Promo Price: **$99.99**
-   - Includes: Heat exchanger, burners, and furnace blower fan cleaning. Optimizes heating efficiency & airflow.
-
-3. **A.C Coils Cleaning (Internal AC System)**
-   - Regular Price: $159.99 | Promo Price: **$129.99**
-   - Includes: Internal cooling coils and fins deep cleaning, mold prevention, and odor elimination.
-
-4. **A.C Condenser Cleaning (Outdoor AC Unit)**
-   - Regular Price: $139.99 | Promo Price: **$99.99**
-   - Includes: High-pressure coil washing, fan blades, debris tray, fin straightening, and drain clearing.
-
-5. **Dryer Vent Cleaning (Safety & Efficiency)**
-   - Regular Price: $149.99 | Promo Price: **$99.99**
-   - Includes: Full lint extraction from dryer unit & entire vent line. Reduces fire hazards & drying time.
-
-6. **Air Exchanger Cleaning (HRV/ERV Systems)**
-   - Regular Price: $159.99 | Promo Price: **$129.99**
-   - Includes: Deep cleaning of core filters, heat/energy recovery cores, and internal blowers.
-
-7. **Exhaust Fan Cleaning (Bathroom/Kitchen Fans)**
-   - Regular Price: $24.99 | Promo Price: **$19.99**
-   - Includes: Cleaning of fan motors, blades, vent covers, and connected pipeline. Clears sticky grease/dust.
-
-8. **Central Vacuum Cleaning (Built-in Vacuum Lines)**
-   - Regular Price: $199.99 | Promo Price: **$149.99**
-   - Includes: Complete flushing of piping network, canister unit sanitization, inlet valve cleaning.
-
-9. **Bird Nest Removal & Guard Installation**
-   - Flat Price: **$149.99**
-   - Includes: Safe humane nest removal from vents/chimneys, sanitization for bird mites/bacteria, and protective mesh guard installation.
+1. **Air Duct Cleaning (Central Ventilation System):** Regular $349.99 | Promo: **$249.99** (Includes free J-Panel Brushing)
+2. **Furnace Cleaning:** Regular $139.99 | Promo: **$99.99**
+3. **A.C Coils Cleaning:** Regular $159.99 | Promo: **$129.99**
+4. **A.C Condenser Cleaning:** Regular $139.99 | Promo: **$99.99**
+5. **Dryer Vent Cleaning:** Regular $149.99 | Promo: **$99.99**
+6. **Air Exchanger Cleaning:** Regular $159.99 | Promo: **$129.99**
+7. **Exhaust Fan Cleaning:** Regular $24.99 | Promo: **$19.99**
+8. **Central Vacuum Cleaning:** Regular $199.99 | Promo: **$149.99**
+9. **Bird Nest Removal & Guard Installation:** Flat **$149.99**
 
 ---
 
 ### 3. SERVICE COVERAGE AREAS
-We serve the GTA (Greater Toronto Area) and surrounding regions in Ontario, Canada, including:
-Ajax, Alliston, Aurora, Barrie, Beamsville, Belleville, Bolton, Bowmanville, Bracebridge, Bradford, Brantford, Brockville, Caledonia, Cambridge, Chatham, Cobourg, Collingwood, Cornwall, East Gwillimbury, Fergus, Fort Erie, Georgetown, Goderich, Gravenhurst, GTA, Guelph, Hamilton, and surrounding areas.
+Ajax, Alliston, Aurora, Barrie, Beamsville, Belleville, Bolton, Bowmanville, Bracebridge, Bradford, Brantford, Brockville, Caledonia, Cambridge, Chatham, Cobourg, Collingwood, Cornwall, East Gwillimbury, Fergus, Fort Erie, Georgetown, Goderich, Gravenhurst, GTA, Guelph, Hamilton, and surrounding Ontario areas.
 
 ---
 
 ### 4. IN-CHAT BOOKING & LEAD COLLECTION FLOW
-When a user asks to book a service, get a formal quote, or schedule an appointment, follow this step-by-step friendly process:
+When a user wants to book or get a quote, step-by-step collect:
+1. Full Name (Split into First & Last Name)
+2. Phone Number
+3. Email Address
+4. Service Required
+5. City / Location Address
 
-1. Express enthusiasm and confirm current promotional rates.
-2. Politely collect the following details (ask 1 or 2 at a time so it feels like a natural conversation):
-   - Full Name
-   - Phone Number
-   - Email Address
-   - Service Required (e.g., Air Duct Cleaning, Furnace, Dryer Vent)
-   - City / Address / Postal Code
-   - Preferred Date & Time Slot
-3. Once all details are collected, thank the user warmly and confirm:
-   "Thank you! Your booking request has been logged. Our dispatch team will review your preferred slot and contact you shortly at your provided phone number/email to confirm your appointment."
+CRITICAL INSTRUCTION FOR FINAL BOOKING STEP:
+As soon as you have collected the minimum required info (First Name, Phone, Email, Service, and City), thank the client naturally in your message AND append a JSON trigger block at the very end of your response in this EXACT format:
 
----
+[BOOKING_DATA: {"firstName": "John", "lastName": "Doe", "email": "john@example.com", "phone": "1234567890", "service": "Air Duct Cleaning", "city": "Toronto", "street": "123 Main St", "postalCode": "M5V 2T6", "message": "Preferred morning slot"}]
 
-### 5. COMMUNICATION STYLE & GUIDELINES
-- Be warm, helpful, energetic, and professional.
-- Use clear bullet points when explaining pricing or service features.
-- If a customer asks about emergency services, inform them that we provide rapid emergency scheduling across our service areas.
-- Keep responses concise and direct, optimized for mobile screen readability.
+Do not forget to append [BOOKING_DATA: ...] when lead info is complete!
 """
 
-# Initializing Chat History with Welcome Message
+# Initializing Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "assistant",
-            "content": "👋 **Hello! Welcome to Ventra HVAC Support.**\n\nHow can I help you today? You can choose a quick option below or type your question:\n\n1. 💰 **What are your current promotional offers & prices?**\n2. 📅 **How do I book a cleaning appointment?**\n3. 📍 **Which areas in Ontario do you service?**"
+            "content": "👋 **Hello! Welcome to Ventra HVAC Support.**\n\nHow can I help you today? Select a quick option below or type your question:\n\n1. 💰 **What are your current promotional offers & prices?**\n2. 📅 **How do I book a cleaning appointment?**\n3. 📍 **Which areas in Ontario do you service?**"
         }
     ]
 
-# Display history screen
+# Display history screen (Filtering out internal JSON tags)
 for msg in st.session_state.messages:
     if msg["role"] != "system":
+        clean_content = re.sub(r'\[BOOKING_DATA:.*?\]', '', msg["content"]).strip()
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            st.markdown(clean_content)
 
-# Variable for handling input from either buttons or chat box
+# Prompt Trigger Handler
 prompt = None
 
 # Show Quick Action Buttons at start
@@ -134,14 +126,13 @@ chat_input_val = st.chat_input("Aap ka kya sawal hai?")
 if chat_input_val:
     prompt = chat_input_val
 
-# Process Response if Prompt is Triggered (via Button or Input)
+# Process Response
 if prompt:
-    # Append User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
-    # Groq API Call for Assistant Reply
+    # Groq API Call
     with st.chat_message("assistant"):
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -149,6 +140,21 @@ if prompt:
             temperature=0.7
         )
         reply = completion.choices[0].message.content
-        st.markdown(reply)
+        
+        # Check if booking data trigger is present in AI response
+        booking_match = re.search(r'\[BOOKING_DATA:\s*(\{.*?\})\s*\]', reply)
+        if booking_match:
+            try:
+                data_dict = json.loads(booking_match.group(1))
+                # Send email via EmailJS API
+                email_sent = send_emailjs_lead(data_dict)
+                if email_sent:
+                    st.toast("✅ Booking details dispatched directly to Ventra HVAC team!")
+            except Exception as err:
+                print("JSON Parsing error:", err)
+
+        # Render display message (clean without JSON tag)
+        clean_reply = re.sub(r'\[BOOKING_DATA:.*?\]', '', reply).strip()
+        st.markdown(clean_reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
         st.rerun()

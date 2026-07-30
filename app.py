@@ -96,23 +96,52 @@ When a user asks to book a service, get a formal quote, or schedule an appointme
 - Keep responses concise and direct, optimized for mobile screen readability.
 """
 
-# Chat history state initialize karen
+# Initializing Chat History with Welcome Message
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    st.session_state.messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "assistant",
+            "content": "👋 **Hello! Welcome to Ventra HVAC Support.**\n\nHow can I help you today? You can choose a quick option below or type your question:\n\n1. 💰 **What are your current promotional offers & prices?**\n2. 📅 **How do I book a cleaning appointment?**\n3. 📍 **Which areas in Ontario do you service?**"
+        }
+    ]
 
-# History screen par dikhayen
+# Display history screen
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+            st.markdown(msg["content"])
 
-# User ka input handle karen
-if prompt := st.chat_input("Aap ka kya sawal hai?"):
+# Variable for handling input from either buttons or chat box
+prompt = None
+
+# Show Quick Action Buttons at start
+if len(st.session_state.messages) <= 2:
+    st.markdown("**Quick Options:**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("💰 View Pricing"):
+            prompt = "What are your current promotional prices and packages?"
+    with col2:
+        if st.button("📅 Book Service"):
+            prompt = "I want to book an HVAC cleaning service."
+    with col3:
+        if st.button("📍 Check Areas"):
+            prompt = "Which cities do you service in Ontario?"
+
+# Standard chat input box
+chat_input_val = st.chat_input("Aap ka kya sawal hai?")
+if chat_input_val:
+    prompt = chat_input_val
+
+# Process Response if Prompt is Triggered (via Button or Input)
+if prompt:
+    # Append User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
-    # Groq API Call
+    # Groq API Call for Assistant Reply
     with st.chat_message("assistant"):
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -120,5 +149,6 @@ if prompt := st.chat_input("Aap ka kya sawal hai?"):
             temperature=0.7
         )
         reply = completion.choices[0].message.content
-        st.write(reply)
+        st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.rerun()

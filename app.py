@@ -86,12 +86,14 @@ Ajax, Alliston, Aurora, Barrie, Beamsville, Belleville, Bolton, Bowmanville, Bra
 ### 3. MANDATORY INSTRUCTION FOR FINAL BOOKING STEP
 Whenever a client provides booking info (First Name, Phone, Email, Service, and City/Address), summarize details politely AND attach the hidden JSON tag at the VERY END of your message.
 
+CRITICAL RULE: Attach this tag ONLY ONCE when all required details are collected. Do NOT output this tag again in follow-up chat messages.
+
 MANDATORY TAG FORMAT:
 [BOOKING_DATA: {"firstName": "ClientFirstName", "lastName": "", "email": "client@email.com", "phone": "12345678", "service": "Service Name", "city": "City Name"}]
 """
 
 # ==========================================
-# 5. INITIALIZE SESSION STATE
+# 5. INITIALIZE SESSION STATE & DEDUPLICATION FLAG
 # ==========================================
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -101,6 +103,10 @@ if "messages" not in st.session_state:
             "content": "👋 **Hello! Welcome to Ventra HVAC Support.**\n\nHow can I help you today? Select a quick option below or type your question:"
         }
     ]
+
+# Flag to ensure email is sent strictly ONCE per session
+if "lead_sent" not in st.session_state:
+    st.session_state.lead_sent = False
 
 # ==========================================
 # 6. DISPLAY CHAT HISTORY (Cleaned JSON Tag)
@@ -151,13 +157,14 @@ if prompt:
         )
         reply = completion.choices[0].message.content
         
-        # Check if response contains JSON lead tag
+        # Check if response contains JSON lead tag AND lead has not been sent yet
         booking_match = re.search(r'\[BOOKING_DATA:\s*(\{.*?\})\s*\]', reply, flags=re.DOTALL)
-        if booking_match:
+        if booking_match and not st.session_state.lead_sent:
             try:
                 data_dict = json.loads(booking_match.group(1))
                 email_sent, status_msg = send_emailjs_lead(data_dict)
                 if email_sent:
+                    st.session_state.lead_sent = True  # Block any duplicate email triggers
                     st.toast("✅ Booking notification sent to service@ventrahvac.ca!")
                 else:
                     st.error(f"⚠️ Email Sending Failed: {status_msg}")

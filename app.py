@@ -14,14 +14,26 @@ st.set_page_config(
 )
 
 # ==========================================
-# HIDE STREAMLIT BRANDING (FOOTER & HEADER)
+# 2. HIDE STREAMLIT BRANDING (FOOTER, HEADER & BADGES)
 # ==========================================
 hide_streamlit_style = """
             <style>
-            #MainMenu {visibility: hidden;}
+            #MainMenu {visibility: hidden; display: none !important;}
             footer {visibility: hidden; display: none !important;}
-            header {visibility: hidden;}
-            .stAppHeader {display: none;}
+            header {visibility: hidden; display: none !important;}
+            .stAppHeader {display: none !important;}
+            
+            /* Hide Streamlit Embed Badges & Elements */
+            [data-testid="stStatusWidget"] {display: none !important;}
+            [data-testid="stToolbar"] {display: none !important;}
+            [data-testid="stDecoration"] {display: none !important;}
+            div[class*="viewerBadge"] {display: none !important;}
+            div[class*="stStatusWidget"] {display: none !important;}
+            div[class*="styles_viewerBadge"] {display: none !important;}
+            .viewerBadge_container__18336 {display: none !important;}
+            
+            /* Clean up bottom spacing */
+            .stAppViewBlockContainer {padding-bottom: 0px !important;}
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -29,12 +41,12 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.title("Ventra HVAC Customer Support")
 
 # ==========================================
-# 2. GROQ CLIENT INITIALIZATION
+# 3. GROQ CLIENT INITIALIZATION
 # ==========================================
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # ==========================================
-# 3. EMAILJS REST API DISPATCH FUNCTION
+# 4. EMAILJS REST API DISPATCH FUNCTION
 # ==========================================
 def send_emailjs_lead(lead_data):
     url = "https://api.emailjs.com/api/v1.0/email/send"
@@ -70,7 +82,7 @@ def send_emailjs_lead(lead_data):
         return False, str(e)
 
 # ==========================================
-# 4. SYSTEM PROMPT & STRICT SCOPE GUARDRAILS
+# 5. SYSTEM PROMPT & STRICT SCOPE GUARDRAILS
 # ==========================================
 SYSTEM_PROMPT = """
 You are "Ventra Bot", the official AI Customer Support & Booking Representative for Ventra HVAC.
@@ -127,7 +139,7 @@ MANDATORY TAG FORMAT:
 """
 
 # ==========================================
-# 5. INITIALIZE SESSION STATE & DEDUPLICATION FLAG
+# 6. INITIALIZE SESSION STATE & DEDUPLICATION FLAG
 # ==========================================
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -143,7 +155,7 @@ if "lead_sent" not in st.session_state:
     st.session_state.lead_sent = False
 
 # ==========================================
-# 6. DISPLAY CHAT HISTORY (Cleaned JSON Tag)
+# 7. DISPLAY CHAT HISTORY (Cleaned JSON Tag)
 # ==========================================
 for msg in st.session_state.messages:
     if msg["role"] != "system":
@@ -152,7 +164,7 @@ for msg in st.session_state.messages:
             st.markdown(clean_content)
 
 # ==========================================
-# 7. QUICK ACTION BUTTONS
+# 8. QUICK ACTION BUTTONS
 # ==========================================
 prompt = None
 
@@ -173,7 +185,7 @@ if len(st.session_state.messages) <= 2:
             prompt = "I want to register a complaint about a service."
 
 # ==========================================
-# 8. CHAT INPUT & RESPONSE LOGIC
+# 9. CHAT INPUT & RESPONSE LOGIC
 # ==========================================
 chat_input_val = st.chat_input("Type your message here...")
 if chat_input_val:

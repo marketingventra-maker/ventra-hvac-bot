@@ -13,6 +13,19 @@ st.set_page_config(
     layout="centered"
 )
 
+# ==========================================
+# HIDE STREAMLIT BRANDING (FOOTER & HEADER)
+# ==========================================
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden; display: none !important;}
+            header {visibility: hidden;}
+            .stAppHeader {display: none;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 st.title("Ventra HVAC Customer Support")
 
 # ==========================================
